@@ -84,6 +84,15 @@ class ConnectionManager {
 	}
 
 	/**
+	 * Mark a node as no longer having listeners attached.
+	 * Call this after the node removes its IPC event listeners.
+	 */
+	unregister(nodeId: string): void {
+		this.registeredNodes.delete(nodeId);
+		console.log(`[ConnectionManager] Node ${nodeId} listener registry cleared.`);
+	}
+
+	/**
 	 * Get the current number of active connections.
 	 * Useful for debugging and testing.
 	 */
