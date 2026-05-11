@@ -13,7 +13,6 @@ import ipc from 'node-ipc';
 import {
     connection,
     ICredentials,
-    checkWorkflowStatus,
     getChannels as getChannelsHelper,
     getRoles as getRolesHelper,
     getGuilds as getGuildsHelper,
@@ -22,6 +21,20 @@ import { connectionManager } from '../connectionManager';
 
 // we start the bot if we are in the main process
 if (!process.send) bot();
+
+function removeIpcListener(eventName: string, handler: (...args: any[]) => void) {
+    const botSocket = ipc.of?.bot as any;
+    if (!botSocket) return;
+
+    if (typeof botSocket.off === 'function') {
+        botSocket.off(eventName, handler);
+        return;
+    }
+
+    if (typeof botSocket.removeListener === 'function') {
+        botSocket.removeListener(eventName, handler);
+    }
+}
 
 export class DiscordTrigger implements INodeType {
     description: INodeTypeDescription = {
@@ -87,6 +100,8 @@ export class DiscordTrigger implements INodeType {
 
         await connection(credentials).catch((e) => e);
 
+        const registeredHandlers: Array<{ eventName: string; handler: (...args: any[]) => void }> = [];
+
         ipc.connectTo('bot', () => {
             console.log('Connected to IPC server');
             
@@ -118,7 +133,7 @@ export class DiscordTrigger implements INodeType {
                 return;
             }
 
-            ipc.of.bot.on('messageCreate', ({ message, author, guild, nodeId, messageReference, attachments, referenceAuthor }: any) => {
+            const messageCreateHandler = ({ message, author, guild, nodeId, messageReference, attachments, referenceAuthor }: any) => {
                 if( this.getNode().id === nodeId) {
                     console.log("received messageCreate event", message.id);
 
@@ -155,25 +170,31 @@ export class DiscordTrigger implements INodeType {
                         this.helpers.returnJsonArray(messageCreateOptions),
                     ]);
                 }
-            });
+            };
+            ipc.of.bot.on('messageCreate', messageCreateHandler);
+            registeredHandlers.push({ eventName: 'messageCreate', handler: messageCreateHandler });
 
-            ipc.of.bot.on('guildMemberAdd', ({guildMember, guild, user, nodeId}) => {
+            const guildMemberAddHandler = ({guildMember, guild, user, nodeId}: any) => {
                 if( this.getNode().id === nodeId) {
                     this.emit([
                         this.helpers.returnJsonArray(guildMember),
                     ]);
                 }
-            });
+            };
+            ipc.of.bot.on('guildMemberAdd', guildMemberAddHandler);
+            registeredHandlers.push({ eventName: 'guildMemberAdd', handler: guildMemberAddHandler });
 
-            ipc.of.bot.on('guildMemberRemove', ({guildMember, guild, user, nodeId}) => {
+            const guildMemberRemoveHandler = ({guildMember, guild, user, nodeId}: any) => {
                 if( this.getNode().id === nodeId) {
                     this.emit([
                         this.helpers.returnJsonArray(guildMember),
                     ]);
                 }
-            });
+            };
+            ipc.of.bot.on('guildMemberRemove', guildMemberRemoveHandler);
+            registeredHandlers.push({ eventName: 'guildMemberRemove', handler: guildMemberRemoveHandler });
 
-            ipc.of.bot.on('guildMemberUpdate', ({oldMember, newMember, guild, nodeId}) => {
+            const guildMemberUpdateHandler = ({oldMember, newMember, guild, nodeId}: any) => {
                 if( this.getNode().id === nodeId) {
 
                     const addPrefix = (obj: any, prefix: string) =>
@@ -189,41 +210,51 @@ export class DiscordTrigger implements INodeType {
                         this.helpers.returnJsonArray(mergedGuildMemberUpdateOptions),
                     ]);
                 }
-            });
+            };
+            ipc.of.bot.on('guildMemberUpdate', guildMemberUpdateHandler);
+            registeredHandlers.push({ eventName: 'guildMemberUpdate', handler: guildMemberUpdateHandler });
 
-            ipc.of.bot.on('messageReactionAdd', ({messageReaction, message, user, guild, nodeId}) => {
+            const messageReactionAddHandler = ({messageReaction, message, user, guild, nodeId}: any) => {
                 if( this.getNode().id === nodeId) {
                     this.emit([
                         this.helpers.returnJsonArray({...messageReaction, ...user, channelId: message.channelId, guildId: guild.id}),
                     ]);
                 }
-            });
+            };
+            ipc.of.bot.on('messageReactionAdd', messageReactionAddHandler);
+            registeredHandlers.push({ eventName: 'messageReactionAdd', handler: messageReactionAddHandler });
 
-            ipc.of.bot.on('messageReactionRemove', ({messageReaction, message, user, guild, nodeId}) => {
+            const messageReactionRemoveHandler = ({messageReaction, message, user, guild, nodeId}: any) => {
                 if(this.getNode().id === nodeId) {
                     this.emit([
                         this.helpers.returnJsonArray({...messageReaction, ...user, channelId: message.channelId, guildId: guild.id}),
                     ]);
                 }
-            });
+            };
+            ipc.of.bot.on('messageReactionRemove', messageReactionRemoveHandler);
+            registeredHandlers.push({ eventName: 'messageReactionRemove', handler: messageReactionRemoveHandler });
 
-            ipc.of.bot.on('roleCreate', ({role, guild, nodeId}) => {
+            const roleCreateHandler = ({role, guild, nodeId}: any) => {
                 if( this.getNode().id === nodeId) {
                     this.emit([
                         this.helpers.returnJsonArray(role),
                     ]);
                 }
-            });
+            };
+            ipc.of.bot.on('roleCreate', roleCreateHandler);
+            registeredHandlers.push({ eventName: 'roleCreate', handler: roleCreateHandler });
 
-            ipc.of.bot.on('roleDelete', ({role, guild, nodeId}) => {
+            const roleDeleteHandler = ({role, guild, nodeId}: any) => {
                 if( this.getNode().id === nodeId) {
                     this.emit([
                         this.helpers.returnJsonArray(role),
                     ]);
                 }
-            });
+            };
+            ipc.of.bot.on('roleDelete', roleDeleteHandler);
+            registeredHandlers.push({ eventName: 'roleDelete', handler: roleDeleteHandler });
 
-            ipc.of.bot.on('roleUpdate', ({oldRole, newRole, guild, nodeId}) => {
+            const roleUpdateHandler = ({oldRole, newRole, guild, nodeId}: any) => {
                 if( this.getNode().id === nodeId) {
 
                     const addPrefix = (obj: any, prefix: string) =>
@@ -238,7 +269,9 @@ export class DiscordTrigger implements INodeType {
                         this.helpers.returnJsonArray(mergedRoleOptions),
                     ]);
                 }
-            });
+            };
+            ipc.of.bot.on('roleUpdate', roleUpdateHandler);
+            registeredHandlers.push({ eventName: 'roleUpdate', handler: roleUpdateHandler });
         });
 
         ipc.of.bot.on('disconnect', () => {
@@ -248,22 +281,22 @@ export class DiscordTrigger implements INodeType {
         // Return the cleanup function
         return {
             closeFunction: async () => {
-                const credentials = (await this.getCredentials('discordBotTriggerApi').catch((e) => e)) as any as ICredentials;
-                const isActive = await checkWorkflowStatus(credentials.baseUrl, credentials.apiKey, String(this.getWorkflow().id));
-
                 // remove the node from being executed
                 console.log("removing trigger node");
 
                 const currentNodeId = this.getNode().id;
-                const shouldDisconnect = !isActive || this.getActivationMode() !== 'manual';
+                for (const { eventName, handler } of registeredHandlers) {
+                    removeIpcListener(eventName, handler);
+                }
+                if (registeredHandlers.length > 0) {
+                    connectionManager.unregister(currentNodeId);
+                }
 
                 // Send message to bot process to deregister this node, then disconnect if needed
                 ipc.connectTo('bot', () => {
                     ipc.of.bot.emit('triggerNodeRemoved', { nodeId: currentNodeId });
                     // Disconnect after the message is sent
-                    if (shouldDisconnect) {
-                        connectionManager.disconnect(currentNodeId);
-                    }
+                    connectionManager.disconnect(currentNodeId);
                 });
             },
         };
