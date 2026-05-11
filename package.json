@@ -1,5 +1,5 @@
 {
-  "name": "n8n-nodes-discord-bot-trigger",
+  "name": "n8n-nodes-discord-trigger",
   "version": "0.9.0",
   "description": "A node that triggers a workflow whenever a message from discord is sent.",
   "keywords": [
@@ -11,15 +11,14 @@
     "n8n-community-node-package"
   ],
   "license": "MIT",
-  "homepage": "https://github.com/SilverBtc/n8n-discord-trigger#readme",
+  "homepage": "",
   "author": {
-    "name": "Apegurus",
-    "email": "hello@apeguru.dev",
-    "forkFrom": "katerlol"
+    "name": "katerlol",
+    "email": "katerlol@proton.me"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Apegurus/n8n-discord-trigger"
+    "url": "https://github.com/katerlol/n8n-discord-trigger"
   },
   "engines": {
     "node": ">=18.10",
@@ -33,8 +32,7 @@
     "format": "prettier nodes credentials --write",
     "lint": "eslint nodes credentials package.json",
     "lintfix": "eslint nodes credentials package.json --fix",
-    "lint:prepublish": "eslint -c .eslintrc.prepublish.js nodes credentials package.json",
-    "prepublishOnly": "npm run build && npm run lint:prepublish"  
+    "prepublishOnly": "pnpm build && pnpm lint -c .eslintrc.prepublish.js nodes credentials package.json"
   },
   "files": [
     "dist"

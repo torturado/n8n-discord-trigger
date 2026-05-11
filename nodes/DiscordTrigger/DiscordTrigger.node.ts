@@ -260,7 +260,6 @@ export class DiscordTrigger implements INodeType {
                 // Send message to bot process to deregister this node, then disconnect if needed
                 ipc.connectTo('bot', () => {
                     ipc.of.bot.emit('triggerNodeRemoved', { nodeId: currentNodeId });
-
                     // Disconnect after the message is sent
                     if (shouldDisconnect) {
                         connectionManager.disconnect(currentNodeId);
